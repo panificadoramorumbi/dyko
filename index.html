@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panificadora Morumbi - Controle de Revenda</title>
+
+    <meta name="theme-color" content="#8b0000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3014/3014311.png">
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3014/3014311.png">
+
+    <style>
+        :root {
+            --primary: #8b0000;
+            --primary-light: #a52a2a;
+            --accent: #f39c12;
+            --bg-color: #fdf6e3; 
+            --text-color: #3e2723; 
+            --danger: #c0392b;
+            --success: #27ae60;
+            --locked: #bdc3c7;
+            --white: #ffffff;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-color); }
+
+        .navbar {
+            background-color: var(--primary); color: var(--white); padding: 12px 20px;
+            display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .navbar-brand { display: flex; align-items: center; gap: 8px; font-size: 1rem; font-weight: bold; }
+        .menu-btn { background: none; border: none; color: var(--white); font-size: 1.5rem; cursor: pointer; }
+
+        .sidebar {
+            height: 100%; width: 0; position: fixed; z-index: 1001; top: 0; left: 0;
+            background-color: var(--text-color); overflow-x: hidden; transition: 0.3s; padding-top: 60px;
+        }
+        .sidebar a { padding: 15px 25px; text-decoration: none; font-size: 1.1rem; color: #ecf0f1; display: block; }
+        .sidebar a:hover { background-color: var(--primary); }
+        .sidebar .close-btn { position: absolute; top: 10px; right: 20px; font-size: 2rem; background: none; border: none; color: var(--white); cursor: pointer; }
+
+        .container { max-width: 800px; margin: 20px auto; padding: 0 15px; }
+
+        .card { background: var(--white); border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .card-header { font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; color: var(--primary); border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; }
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 1rem; }
+        .form-group input:disabled { background-color: #e0e0e0; cursor: not-allowed; }
+
+        .password-wrapper { position: relative; display: flex; align-items: center; }
+        .password-wrapper input { width: 100%; padding-right: 40px; }
+        .toggle-pass {
+            position: absolute; right: 10px; background: none; border: none;
+            cursor: pointer; font-size: 1.2rem; color: #666; padding: 5px;
+        }
+
+        .math-hint { font-size: 0.85rem; color: var(--success); margin-top: 4px; font-weight: bold; }
+
+        .btn { display: block; width: 100%; padding: 12px; font-size: 1rem; font-weight: bold; color: var(--white); border: none; border-radius: 5px; cursor: pointer; margin-top: 10px; text-align: center; }
+        .btn-primary { background-color: var(--primary); }
+        .btn-primary:hover { background-color: var(--primary-light); }
+        .btn-success { background-color: var(--success); }
+        .btn-locked { background-color: var(--locked); cursor: not-allowed; }
+        .btn-danger { background-color: var(--danger); }
+
+        .extrato { background: var(--bg-color); padding: 15px; border-radius: 8px; border: 1px dashed var(--primary); margin-top: 15px; }
+        .extrato p { display: flex; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+        .extrato .total { font-size: 1.2rem; font-weight: bold; color: var(--danger); border-bottom: none; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background-color: var(--primary); color: white; }
+
+        #toast {
+            visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center;
+            border-radius: 4px; padding: 16px; position: fixed; z-index: 2000; left: 50%; bottom: 30px;
+            transform: translateX(-50%); font-size: 1rem; box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+        }
+        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+
+        .auth-container { max-width: 400px; margin: 40px auto; }
+        .logo-box { text-align: center; margin-bottom: 15px; }
+        .logo-icon { font-size: 3.5rem; background: #fdf2e9; width: 80px; height: 80px; line-height: 80px; border-radius: 50%; margin: 0 auto; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+
+    <div id="toast">Mensagem do Sistema</div>
+
+    <!-- TELA DE LOGIN / CADASTRO -->
+    <div id="auth-screen" class="container auth-container">
+        <div class="card">
+            <div class="logo-box">
+                <div class="logo-icon">🍞</div>
+                <h2 style="color: var(--primary); font-size: 1.5rem; margin-top: 10px;">Panificadora Morumbi</h2>
+                <p style="color: #666; font-size: 0.85rem;">Controle de Revenda de Pães</p>
+            </div>
+
+            <div id="form-login">
+                <div class="form-group">
+                    <label>E-mail:</label>
+                    <input type="email" id="login-user" placeholder="Seu e-mail de acesso" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label>Senha:</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="login-pass" placeholder="Sua senha">
+                        <button type="button" class="toggle-pass" onclick="togglePassword('login-pass', this)">👁️</button>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="fazerLogin()">Entrar</button>
+                <p style="text-align: center; margin-top: 15px; font-size: 0.9rem;">
+                    Não tem conta? <a href="#" onclick="alternarAuth('cadastro')" style="color: var(--primary);">Criar conta de cliente</a>
+                </p>
+            </div>
+
+            <div id="form-cadastro" style="display: none;">
+                <div class="form-group">
+                    <label>Seu Nome / Estabelecimento:</label>
+                    <input type="text" id="cad-nome" placeholder="Ex: João (Mercadinho)">
+                </div>
+                <div class="form-group">
+                    <label>Usuário (nome curto):</label>
+                    <input type="text" id="cad-user" placeholder="Ex.: mercadinhojoao">
+                </div>
+                <div class="form-group">
+                    <label>E-mail de acesso:</label>
+                    <input type="email" id="cad-email" placeholder="seuemail@exemplo.com" autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label>Criar Senha:</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="cad-pass" placeholder="Senha (mínimo 6 caracteres)" autocomplete="new-password">
+                        <button type="button" class="toggle-pass" onclick="togglePassword('cad-pass', this)">👁️</button>
+                    </div>
+                </div>
+                <button class="btn btn-success" onclick="cadastrarCliente()">Cadastrar Conta</button>
+                <p style="text-align: center; margin-top: 15px; font-size: 0.9rem;">
+                    Já tem conta? <a href="#" onclick="alternarAuth('login')" style="color: var(--primary);">Fazer Login</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- APLICATIVO PRINCIPAL -->
+    <div id="app-screen" style="display: none;">
+
+        <div id="sidebar" class="sidebar">
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+            <div id="menu-links"></div>
+        </div>
+
+        <nav class="navbar">
+            <button class="menu-btn" onclick="toggleMenu()">☰</button>
+            <div class="navbar-brand">🍞 Panificadora Morumbi</div>
+            <div id="user-badge" style="font-size: 0.8rem; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 12px;">Usuário</div>
+        </nav>
+
+        <div class="container">
+
+            <section id="view-cliente-pedido" style="display: none;">
+                <div class="card">
+                    <div class="card-header">📅 Novo Pedido / Agendamento Diário</div>
+                    <div class="form-group">
+                        <label>Escolha a Data do Pedido (Hoje, Amanhã, etc.):</label>
+                        <input type="date" id="data-pedido" onchange="carregarPedidoCliente()">
+                    </div>
+
+                    <h3 style="color: var(--primary); font-size: 1rem; margin-top: 15px;">1. Retirada de Pães (Manhã)</h3>
+                    <div style="display: flex; gap: 10px; margin-top: 8px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label>Sal (Peguei):</label>
+                            <input type="number" id="c-pegou-sal" oninput="calcularCliente()" placeholder="0" min="0">
+                            <div class="math-hint" id="math-c-pegou-sal">0 un x R$ 0,70 = R$ 0,00</div>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label>Doce (Peguei):</label>
+                            <input type="number" id="c-pegou-doce" oninput="calcularCliente()" placeholder="0" min="0">
+                            <div class="math-hint" id="math-c-pegou-doce">0 un x R$ 0,70 = R$ 0,00</div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="btn-salvar-retirada" onclick="salvarRetiradaCliente()">Salvar Retirada (Travar)</button>
+
+                    <hr style="border: 1px solid #eee; margin: 20px 0;">
+
+                    <h3 style="color: var(--primary); font-size: 1rem;">2. Devolução de Sobras (Fim do Dia)</h3>
+                    <p style="font-size: 0.85rem; color: #666; margin-bottom: 8px;">Se vendeu tudo e não sobrou nada, deixe em branco ou 0.</p>
+                    <div style="display: flex; gap: 10px; margin-top: 8px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label>Sal (Sobrou):</label>
+                            <input type="number" id="c-sobrou-sal" oninput="calcularCliente()" placeholder="0" disabled min="0">
+                            <div class="math-hint" id="math-c-sobrou-sal">0 un x R$ 0,70 = R$ 0,00</div>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label>Doce (Sobrou):</label>
+                            <input type="number" id="c-sobrou-doce" oninput="calcularCliente()" placeholder="0" disabled min="0">
+                            <div class="math-hint" id="math-c-sobrou-doce">0 un x R$ 0,70 = R$ 0,00</div>
+                        </div>
+                    </div>
+
+                    <div class="extrato">
+                        <p><span>Total Retirado:</span> <span id="c-ext-ret">R$ 0,00</span></p>
+                        <p><span>Total Devolvido:</span> <span id="c-ext-sob">R$ 0,00</span></p>
+                        <p class="total"><span>Líquido a Pagar:</span> <span id="c-ext-pag">R$ 0,00</span></p>
+                    </div>
+
+                    <div id="status-pagamento-cliente" style="margin-top: 15px; padding: 12px; border-radius: 5px; text-align: center; font-weight: bold; display: none;"></div>
+
+                    <button class="btn btn-success" id="btn-fechar-dia" onclick="fecharDiaCliente()" disabled>Fechar Pedido do Dia</button>
+                </div>
+            </section>
+
+            <section id="view-cliente-historico" style="display: none;">
+                <div class="card">
+                    <div class="card-header">📋 Meu Histórico Completo</div>
+                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;">Visualize abaixo todos os pedidos passados e futuros agendados:</p>
+                    <div id="tabela-historico-cliente"></div>
+                </div>
+            </section>
+
+            <section id="view-dono-dashboard" style="display: none;">
+                <div class="card">
+                    <div class="card-header">Painel Financeiro da Padaria (Dyko)</div>
+                    <div style="background: #fff3cd; color: #856404; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-size: 0.9rem; text-align: center;">
+                        🔔 <b>Notificações Nativas:</b> <button onclick="pedirPermissaoNotificacao()" style="background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-left: 5px;">Ativar Alertas</button>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                        <div style="background: var(--accent); color: white; padding: 15px; border-radius: 8px; text-align: center;">
+                            <h3 id="dash-a-receber" style="font-size: 1.5rem;">R$ 0,00</h3>
+                            <p style="font-size: 0.8rem; font-weight: bold;">TOTAL A RECEBER (PENDENTE)</p>
+                        </div>
+                        <div style="background: var(--success); color: white; padding: 15px; border-radius: 8px; text-align: center;">
+                            <h3 id="dash-pao-vendido" style="font-size: 1.5rem;">0</h3>
+                            <p style="font-size: 0.8rem; font-weight: bold;">PÃES VENDIDOS (GERAL)</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-dono-clientes" style="display: none;">
+                <div class="card">
+                    <div class="card-header">👥 Meus Clientes</div>
+                    <div id="lista-clientes-dono"></div>
+                </div>
+            </section>
+
+            <section id="view-dono-pedidos" style="display: none;">
+                <div class="card">
+                    <div class="card-header">📝 Auditoria e Correção de Pedidos</div>
+                    <div class="form-group">
+                        <label>Filtrar por Data:</label>
+                        <input type="date" id="filtro-data-dono" onchange="carregarPedidosDono()">
+                    </div>
+                    <div id="lista-pedidos-dono"></div>
+                </div>
+            </section>
+
+            <section id="view-dono-config" style="display: none;">
+                <div class="card">
+                    <div class="card-header">⚙️ Alterar Dados de Acesso (Dyko)</div>
+                    <div class="form-group">
+                        <label>Novo Nome de Usuário:</label>
+                        <input type="text" id="novo-user-admin" placeholder="Digite o novo usuário">
+                    </div>
+                    <div class="form-group">
+                        <label>Nova Senha:</label>
+                        <div class="password-wrapper">
+                            <input type="password" id="novo-pass-admin" placeholder="Digite a nova senha">
+                            <button type="button" class="toggle-pass" onclick="togglePassword('novo-pass-admin', this)">👁️</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="salvarNovoAcessoAdmin()">Salvar Novo Acesso</button>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+          apiKey: "AIzaSyBNISHvnN9e7hDz0ElF-Z68cKoGgIi8wdI",
+          authDomain: "panificadora-morumbi.firebaseapp.com",
+          projectId: "panificadora-morumbi",
+          storageBucket: "panificadora-morumbi.firebasestorage.app",
+          messagingSenderId: "833137916533",
+          appId: "1:833137916533:web:8b40cb62ea3d0c8bd6563c",
+          measurementId: "G-TGG71K9MEY"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        // Keep the session across page refreshes and browser restarts.
+        // Firebase Auth LOCAL persistence is the expected behavior for this web app.
+        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((error) => {
+            console.error('Não foi possível manter a sessão:', error);
+        });
+        const firestore = firebase.firestore();
+        const ADMIN_EMAIL = "wiliamedfprofessor@gmail.com";
+        let firebaseUid = null;
+        const PRECO = 0.70;
+
+        let db = { usuarios: [], pedidos: [] };
+        let usuarioLogado = null;
+        let gravandoDb = false;
+
+        async function salvarDb() {
+            if (!firebaseUid || gravandoDb || !usuarioLogado) return;
+            gravandoDb = true;
+            try {
+                const batch = firestore.batch();
+                if (usuarioLogado.tipo === 'dono') {
+                    for (const u of db.usuarios) {
+                        const uid = u.uid || (u.email === ADMIN_EMAIL ? firebaseUid : null);
+                        if (!uid) continue;
+                        const payload = { nome:u.nome, user:u.user, email:u.email || '', tipo:u.tipo, ativo:u.ativo !== false };
+                        batch.set(firestore.collection('usuarios').doc(uid), payload, {merge:true});
+                    }
+                    for (const p of db.pedidos) {
+                        const id = p.id || `${encodeURIComponent(p.user)}_${p.data}`;
+                        const payload = {...p}; delete payload.id;
+                        batch.set(firestore.collection('pedidos').doc(id), payload, {merge:true});
+                    }
+                } else {
+                    const own = db.usuarios.find(u => u.uid === firebaseUid) || usuarioLogado;
+                    batch.set(firestore.collection('usuarios').doc(firebaseUid), {
+                        nome:own.nome, user:own.user, email:auth.currentUser.email, tipo:'cliente', ativo:own.ativo !== false
+                    }, {merge:true});
+                    for (const p of db.pedidos.filter(x => x.uid === firebaseUid || x.user === usuarioLogado.user)) {
+                        const id = p.id || `${firebaseUid}_${p.data}`;
+                        const payload = {...p, uid:firebaseUid}; delete payload.id;
+                        batch.set(firestore.collection('pedidos').doc(id), payload, {merge:true});
+                    }
+                }
+                await batch.commit();
+            } catch (e) {
+                console.error('Erro ao salvar no Firebase:', e);
+                mostrarToast('Não foi possível salvar. Confira as regras do Firestore e a conexão.');
+            } finally { gravandoDb = false; }
+        }
+
+        async function carregarDadosFirebase(user) {
+            const isAdmin = (user.email || '').toLowerCase() === ADMIN_EMAIL;
+            const perfilRef = firestore.collection('usuarios').doc(user.uid);
+            const perfilSnap = await perfilRef.get();
+            let perfil = perfilSnap.exists ? perfilSnap.data() : null;
+            if (!perfil) {
+                perfil = { nome: isAdmin ? 'Dyko (Padaria)' : (user.displayName || user.email.split('@')[0]), user: isAdmin ? 'admin' : user.email.split('@')[0], email:user.email, tipo:isAdmin ? 'dono' : 'cliente', ativo:true };
+                await perfilRef.set(perfil, {merge:true});
+            }
+            if (isAdmin) {
+                const [us, ps] = await Promise.all([firestore.collection('usuarios').get(), firestore.collection('pedidos').get()]);
+                db.usuarios = us.docs.map(d => ({...d.data(), uid:d.id}));
+                db.pedidos = ps.docs.map(d => ({...d.data(), id:d.id}));
+                if (!db.usuarios.some(u => u.uid === user.uid)) db.usuarios.push({...perfil, uid:user.uid});
+                if (!db.usuarios.some(u => u.tipo === 'dono')) db.usuarios.push({...perfil, uid:user.uid, tipo:'dono'});
+                usuarioLogado = {...(db.usuarios.find(u => u.uid === user.uid) || perfil), uid:user.uid, tipo:'dono', email:user.email};
+            } else {
+                const [ps] = await Promise.all([firestore.collection('pedidos').where('uid','==',user.uid).get()]);
+                db.usuarios = [{...perfil, uid:user.uid, email:user.email, tipo:'cliente'}];
+                db.pedidos = ps.docs.map(d => ({...d.data(), id:d.id}));
+                usuarioLogado = {...perfil, uid:user.uid, email:user.email, tipo:'cliente'};
+                if (usuarioLogado.ativo === false) { await auth.signOut(); throw new Error('Esta conta está desativada. Fale com o administrador.'); }
+            }
+        }
+
+        function mostrarToast(msg) {
+            const t = document.getElementById("toast");
+            t.innerText = msg;
+            t.className = "show";
+            setTimeout(() => { t.className = t.className.replace("show", ""); }, 3000);
+        }
+
+        function pedirPermissaoNotificacao() {
+            if (!("Notification" in window)) {
+                return alert("Este navegador não suporta notificações.");
+            }
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    mostrarToast("Notificações ativadas com sucesso!");
+                    new Notification("Panificadora Morumbi", {
+                        body: "Alertas ativados! O Dyko será avisado das ações dos clientes.",
+                        icon: "https://cdn-icons-png.flaticon.com/512/3014/3014311.png"
+                    });
+                } else {
+                    mostrarToast("Permissão de notificação negada.");
+                }
+            });
+        }
+
+        function enviarNotificacaoDyko(titulo, mensagem) {
+            if ("Notification" in window && Notification.permission === "granted") {
+                try {
+                    new Notification(titulo, {
+                        body: mensagem,
+                        icon: "https://cdn-icons-png.flaticon.com/512/3014/3014311.png"
+                    });
+                } catch (e) {
+                    console.log("Erro ao enviar notificação push", e);
+                }
+            }
+        }
+
+        function togglePassword(id, btn) {
+            let input = document.getElementById(id);
+            if(input.type === "password") {
+                input.type = "text";
+                btn.innerText = "🙈";
+            } else {
+                input.type = "password";
+                btn.innerText = "👁️";
+            }
+        }
+
+        function alternarAuth(tipo) {
+            if(tipo === 'cadastro') {
+                document.getElementById('form-login').style.display = 'none';
+                document.getElementById('form-cadastro').style.display = 'block';
+            } else {
+                document.getElementById('form-cadastro').style.display = 'none';
+                document.getElementById('form-login').style.display = 'block';
+            }
+        }
+
+        async function cadastrarCliente() {
+            const nome = document.getElementById('cad-nome').value.trim();
+            const userName = document.getElementById('cad-user').value.trim();
+            const email = document.getElementById('cad-email').value.trim().toLowerCase();
+            const pass = document.getElementById('cad-pass').value;
+            if (!nome || !userName || !email || !pass) return mostrarToast('Preencha todos os campos!');
+            if (pass.length < 6) return mostrarToast('A senha precisa ter pelo menos 6 caracteres.');
+            try {
+                const cred = await auth.createUserWithEmailAndPassword(email, pass);
+                await cred.user.updateProfile({displayName:nome});
+                const perfil = {nome, user:userName, email, tipo:'cliente', ativo:true};
+                await firestore.collection('usuarios').doc(cred.user.uid).set(perfil);
+                await auth.signOut();
+                mostrarToast('Conta criada! Entre com seu e-mail e senha.');
+                alternarAuth('login');
+                document.getElementById('login-user').value = email;
+            } catch (e) {
+                console.error(e);
+                mostrarToast(e.code === 'auth/email-already-in-use' ? 'Este e-mail já possui uma conta.' : e.code === 'auth/weak-password' ? 'Escolha uma senha mais forte.' : 'Erro no cadastro: confira o e-mail, senha e regras do Firebase.');
+            }
+        }
+
+        let restaurandoSessao = false;
+        auth.onAuthStateChanged(async (user) => {
+            if (!user || restaurandoSessao) return;
+            // If login already opened the app, do not load the same session twice.
+            if (usuarioLogado && firebaseUid === user.uid && document.getElementById('app-screen').style.display === 'block') return;
+            restaurandoSessao = true;
+            try {
+                firebaseUid = user.uid;
+                await carregarDadosFirebase(user);
+                document.getElementById('auth-screen').style.display = 'none';
+                document.getElementById('app-screen').style.display = 'block';
+                document.getElementById('user-badge').innerText = `${usuarioLogado.nome} (${usuarioLogado.tipo === 'dono' ? 'Administrador' : 'Revendedor'})`;
+                configurarMenu();
+                if (usuarioLogado.tipo === 'dono') {
+                    abrirSecao('view-dono-dashboard');
+                } else {
+                    document.getElementById('data-pedido').value = new Date().toISOString().split('T')[0];
+                    abrirSecao('view-cliente-pedido');
+                    carregarPedidoCliente();
+                }
+            } catch (error) {
+                console.error('Falha ao restaurar sessão:', error);
+                document.getElementById('app-screen').style.display = 'none';
+                document.getElementById('auth-screen').style.display = 'block';
+                mostrarToast('Não foi possível restaurar a sessão. Entre novamente.');
+            } finally {
+                restaurandoSessao = false;
+            }
+        });
+
+        async function fazerLogin() {
+            const email = document.getElementById('login-user').value.trim().toLowerCase();
+            const pass = document.getElementById('login-pass').value;
+            if (!email || !pass) return mostrarToast('Informe e-mail e senha.');
+            try {
+                await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+                const cred = await auth.signInWithEmailAndPassword(email, pass);
+                firebaseUid = cred.user.uid;
+                await carregarDadosFirebase(cred.user);
+                document.getElementById('auth-screen').style.display = 'none';
+                document.getElementById('app-screen').style.display = 'block';
+                document.getElementById('user-badge').innerText = `${usuarioLogado.nome} (${usuarioLogado.tipo === 'dono' ? 'Administrador' : 'Revendedor'})`;
+                configurarMenu();
+                if (usuarioLogado.tipo === 'dono') {
+                    abrirSecao('view-dono-dashboard');
+                } else {
+                    document.getElementById('data-pedido').value = new Date().toISOString().split('T')[0];
+                    abrirSecao('view-cliente-pedido');
+                    carregarPedidoCliente();
+                }
+            } catch (e) {
+                console.error(e);
+                firebaseUid = null;
+                mostrarToast(e.message && e.message.includes('desativada') ? e.message : 'Login não realizado. Verifique e-mail, senha e regras do Firestore.');
+            }
+        }
+
+        function toggleMenu() {
+            const sb = document.getElementById("sidebar");
+            sb.style.width = sb.style.width === "250px" ? "0" : "250px";
+        }
+
+        function configurarMenu() {
+            let links = document.getElementById('menu-links');
+            links.innerHTML = `<button class="close-btn" onclick="toggleMenu()">×</button>`;
+
+            if(usuarioLogado.tipo === 'dono') {
+                links.innerHTML += `
+                    <a href="#" onclick="abrirSecao('view-dono-dashboard'); toggleMenu();">📊 Painel Geral</a>
+                    <a href="#" onclick="alternarSubmenuClientes(event)">👥 Meus Clientes ▾</a>
+                    <div id="submenu-clientes" style="display:none; margin: -4px 0 8px 12px; border-left: 3px solid var(--accent); padding-left: 8px;"></div>
+                    <a href="#" onclick="abrirSecao('view-dono-pedidos'); toggleMenu();">📝 Auditoria de Pedidos</a>
+                    <a href="#" onclick="abrirSecao('view-dono-config'); toggleMenu();">⚙️ Alterar Dados do Dyko</a>
+                    <a href="#" onclick="sairDaConta()" style="color: var(--danger);">Sair da Conta</a>
+                `;
+            } else {
+                links.innerHTML += `
+                    <a href="#" onclick="abrirSecao('view-cliente-pedido'); toggleMenu();">📅 Novo Pedido / Escolher Data</a>
+                    <a href="#" onclick="abrirSecao('view-cliente-historico'); toggleMenu();">📋 Meu Histórico Completo</a>
+                    <a href="#" onclick="sairDaConta()" style="color: var(--danger);">Sair da Conta</a>
+                `;
+            }
+            if(usuarioLogado.tipo === 'dono') renderizarSubmenuClientes();
+        }
+
+        function alternarSubmenuClientes(event) {
+            if(event) event.preventDefault();
+            const sub = document.getElementById('submenu-clientes');
+            if(!sub) return;
+            const abrir = sub.style.display === 'none' || !sub.style.display;
+            sub.style.display = abrir ? 'block' : 'none';
+            if(abrir) renderizarSubmenuClientes();
+        }
+
+        function renderizarSubmenuClientes() {
+            const sub = document.getElementById('submenu-clientes');
+            if(!sub) return;
+            const clientes = (db.usuarios || []).filter(u => u.tipo === 'cliente').sort((a,b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'));
+            if(!clientes.length) {
+                sub.innerHTML = '<div style="color:#ddd; padding:8px 10px; font-size:14px;">Nenhum cliente cadastrado</div>';
+                return;
+            }
+            sub.innerHTML = clientes.map(c => `<a href="#" style="display:block; padding:9px 10px; font-size:14px; border-radius:4px;" onclick="abrirClienteDaLista(event, '${encodeURIComponent(c.user)}')">👤 ${escaparHTML(c.nome || c.user)}</a>`).join('');
+        }
+
+        function abrirClienteDaLista(event, userEncoded) {
+            if(event) event.preventDefault();
+            const user = decodeURIComponent(userEncoded);
+            abrirSecao('view-dono-clientes');
+            renderizarClientesDono();
+            toggleMenu();
+            setTimeout(() => {
+                const card = document.getElementById('cliente-card-' + encodeURIComponent(user));
+                if(card) { card.scrollIntoView({behavior:'smooth', block:'center'}); card.style.outline = '3px solid var(--accent)'; setTimeout(() => card.style.outline = '', 1800); }
+            }, 100);
+        }
+
+        async function sairDaConta() {
+            await auth.signOut();
+            firebaseUid = null;
+            db = { usuarios: [], pedidos: [] };
+            usuarioLogado = null;
+            document.getElementById('app-screen').style.display = 'none';
+            document.getElementById('auth-screen').style.display = 'block';
+            document.getElementById('sidebar').style.width = '0';
+        }
+
+        function abrirSecao(id) {
+            ['view-cliente-pedido', 'view-cliente-historico', 'view-dono-dashboard', 'view-dono-clientes', 'view-dono-pedidos', 'view-dono-config'].forEach(s => {
+                document.getElementById(s).style.display = 'none';
+            });
+            document.getElementById(id).style.display = 'block';
+
+            if(id === 'view-cliente-historico') carregarHistoricoCliente();
+            if(id === 'view-dono-dashboard') calcularDashboard();
+            if(id === 'view-dono-clientes') renderizarClientesDono();
+            if(id === 'view-dono-pedidos') {
+                document.getElementById('filtro-data-dono').value = new Date().toISOString().split('T')[0];
+                carregarPedidosDono();
+            }
+            if(id === 'view-dono-config') {
+                let dono = db.usuarios.find(u => u.tipo === 'dono');
+                document.getElementById('novo-user-admin').value = dono ? (dono.email || ADMIN_EMAIL) : ADMIN_EMAIL;
+                document.getElementById('novo-pass-admin').value = '';
+                document.getElementById('novo-pass-admin').placeholder = 'Use a opção de redefinir senha do Firebase';
+            }
+        }
+
+        async function salvarNovoAcessoAdmin() {
+            const email = document.getElementById('novo-user-admin').value.trim().toLowerCase();
+            if (email !== ADMIN_EMAIL) return mostrarToast('O e-mail administrador configurado é fixo por segurança.');
+            const pass = document.getElementById('novo-pass-admin').value;
+            if (pass) return mostrarToast('Por segurança, altere a senha em Firebase Authentication. Não salvamos senhas no Firestore.');
+            mostrarToast('Acesso administrativo usa o Firebase Authentication: ' + ADMIN_EMAIL);
+        }
+
+        function carregarPedidoCliente() {
+            let data = document.getElementById('data-pedido').value;
+            if (!data || !usuarioLogado) return;
+            let pedido = db.pedidos.find(p => p.user === usuarioLogado.user && p.data === data);
+
+            if(!pedido) {
+                pedido = { uid: firebaseUid, user: usuarioLogado.user, data, pSal: 0, pDoce: 0, sSal: 0, sDoce: 0, statusRetirada: false, statusFechado: false };
+                db.pedidos.push(pedido);
+                salvarDb();
+            }
+
+            document.getElementById('c-pegou-sal').value = pedido.pSal || '';
+            document.getElementById('c-pegou-doce').value = pedido.pDoce || '';
+            document.getElementById('c-sobrou-sal').value = pedido.sSal || '';
+            document.getElementById('c-sobrou-doce').value = pedido.sDoce || '';
+
+            let bRet = document.getElementById('btn-salvar-retirada');
+            let bFec = document.getElementById('btn-fechar-dia');
+            let statusDiv = document.getElementById('status-pagamento-cliente');
+
+            if(pedido.statusRetirada) {
+                document.getElementById('c-pegou-sal').disabled = true;
+                document.getElementById('c-pegou-doce').disabled = true;
+                bRet.className = "btn btn-locked"; bRet.innerText = "🔒 Retirada Travada"; bRet.disabled = true;
+                document.getElementById('c-sobrou-sal').disabled = pedido.statusFechado;
+                document.getElementById('c-sobrou-doce').disabled = pedido.statusFechado;
+            } else {
+                document.getElementById('c-pegou-sal').disabled = false;
+                document.getElementById('c-pegou-doce').disabled = false;
+                bRet.className = "btn btn-primary"; bRet.innerText = "Salvar Retirada (Travar)"; bRet.disabled = false;
+                document.getElementById('c-sobrou-sal').disabled = true;
+                document.getElementById('c-sobrou-doce').disabled = true;
+            }
+
+            if(pedido.statusFechado) {
+                bFec.className = "btn btn-locked"; bFec.innerText = "🔒 Pedido Fechado"; bFec.disabled = true;
+                let pSal = pedido.pSal, pDoce = pedido.pDoce, sSal = pedido.sSal, sDoce = pedido.sDoce;
+                let vendidos = (pSal - sSal) + (pDoce - sDoce);
+                let aPagar = Math.max(0, vendidos * PRECO);
+
+                statusDiv.style.display = 'block';
+                if(aPagar === 0 || (pSal === sSal && pDoce === sDoce)) {
+                    statusDiv.style.background = "#e2f0d9";
+                    statusDiv.style.color = "#385723";
+                    statusDiv.innerText = "✔ Conta Quitada / Sem saldo pendente para esta data.";
+                } else {
+                    statusDiv.style.background = "#fce4d6";
+                    statusDiv.style.color = "#c65911";
+                    statusDiv.innerText = "⏳ Aguardando o Dyko confirmar o pagamento deste dia.";
+                }
+            } else {
+                bFec.className = "btn btn-success"; bFec.innerText = "Fechar Pedido do Dia"; bFec.disabled = !pedido.statusRetirada;
+                statusDiv.style.display = 'none';
+            }
+            calcularCliente();
+        }
+
+        function calcularCliente() {
+            let pSal = parseInt(document.getElementById('c-pegou-sal').value) || 0;
+            let pDoce = parseInt(document.getElementById('c-pegou-doce').value) || 0;
+            let sSal = parseInt(document.getElementById('c-sobrou-sal').value) || 0;
+            let sDoce = parseInt(document.getElementById('c-sobrou-doce').value) || 0;
+
+            document.getElementById('math-c-pegou-sal').innerText = `${pSal} un x R$ 0,70 = R$ ${(pSal * PRECO).toFixed(2)}`;
+            document.getElementById('math-c-pegou-doce').innerText = `${pDoce} un x R$ 0,70 = R$ ${(pDoce * PRECO).toFixed(2)}`;
+            document.getElementById('math-c-sobrou-sal').innerText = `${sSal} un x R$ 0,70 = R$ ${(sSal * PRECO).toFixed(2)}`;
+            document.getElementById('math-c-sobrou-doce').innerText = `${sDoce} un x R$ 0,70 = R$ ${(sDoce * PRECO).toFixed(2)}`;
+
+            let totRet = (pSal + pDoce) * PRECO;
+            let totSob = (sSal + sDoce) * PRECO;
+            let aPagar = Math.max(0, totRet - totSob);
+
+            document.getElementById('c-ext-ret').innerText = `R$ ${totRet.toFixed(2)}`;
+            document.getElementById('c-ext-sob').innerText = `R$ ${totSob.toFixed(2)}`;
+            document.getElementById('c-ext-pag').innerText = `R$ ${aPagar.toFixed(2)}`;
+        }
+
+        function salvarRetiradaCliente() {
+            let data = document.getElementById('data-pedido').value;
+            let pSal = parseInt(document.getElementById('c-pegou-sal').value) || 0;
+            let pDoce = parseInt(document.getElementById('c-pegou-doce').value) || 0;
+            if(pSal < 0 || pDoce < 0) return mostrarToast("A quantidade não pode ser negativa!");
+            if(pSal === 0 && pDoce === 0) return mostrarToast("Insira a quantidade retirada!");
+
+            let pedido = db.pedidos.find(p => p.user === usuarioLogado.user && p.data === data);
+            if (!pedido || pedido.statusRetirada) return mostrarToast("A retirada já foi travada ou não foi encontrada.");
+            pedido.pSal = pSal;
+            pedido.pDoce = pDoce;
+            pedido.statusRetirada = true;
+            salvarDb();
+
+            enviarNotificacaoDyko("Retirada de Pães", `${usuarioLogado.nome} retirou para o dia ${data}: ${pSal} Sal / ${pDoce} Doce.`);
+            mostrarToast("Retirada salva com sucesso!");
+            carregarPedidoCliente();
+        }
+
+        function fecharDiaCliente() {
+            let data = document.getElementById('data-pedido').value;
+            let sSal = parseInt(document.getElementById('c-sobrou-sal').value) || 0;
+            let sDoce = parseInt(document.getElementById('c-sobrou-doce').value) || 0;
+            let pedido = db.pedidos.find(p => p.user === usuarioLogado.user && p.data === data);
+            if (!pedido || !pedido.statusRetirada || pedido.statusFechado) return mostrarToast("Não é possível fechar este pedido.");
+            if(sSal < 0 || sDoce < 0) return mostrarToast("A quantidade não pode ser negativa!");
+            if(sSal > pedido.pSal || sDoce > pedido.pDoce) return mostrarToast("As sobras não podem ser maiores que a quantidade retirada.");
+
+            pedido.sSal = sSal;
+            pedido.sDoce = sDoce;
+            pedido.statusFechado = true;
+            salvarDb();
+
+            let vendidos = (pedido.pSal - sSal) + (pedido.pDoce - sDoce);
+            let total = Math.max(0, vendidos * PRECO);
+            enviarNotificacaoDyko("Fechamento de Caixa", `${usuarioLogado.nome} fechou o dia ${data}. Total a pagar: R$ ${total.toFixed(2)}`);
+            mostrarToast("Pedido fechado com sucesso!");
+            carregarPedidoCliente();
+        }
+
+        function carregarHistoricoCliente() {
+            let container = document.getElementById('tabela-historico-cliente');
+            let meusPedidos = db.pedidos.filter(p => p.user === usuarioLogado.user).sort((a,b) => a.data.localeCompare(b.data));
+
+            if(meusPedidos.length === 0) {
+                container.innerHTML = `<p style="color:#666;">Nenhum registro de pedido encontrado.</p>`;
+                return;
+            }
+
+            let html = `<div style="overflow-x:auto"><table><thead><tr><th>Data</th><th>Retirados</th><th>Sobras</th><th>A Pagar</th><th>Status</th></tr></thead><tbody>`;
+            meusPedidos.forEach(p => {
+                let vendidos = (p.pSal - p.sSal) + (p.pDoce - p.sDoce);
+                let aPagar = Math.max(0, vendidos * PRECO);
+                let quitado = (aPagar === 0 || (p.pSal === p.sSal && p.pDoce === p.sDoce));
+                let statusBadge = "";
+                if(!p.statusRetirada) statusBadge = "⏳ Agendado / Aberto";
+                else if(!p.statusFechado) statusBadge = "🕒 Aguardando Sobras";
+                else if(quitado) statusBadge = "✅ Sem saldo";
+                else statusBadge = "⏳ Pendente acerto Dyko";
+                html += `<tr><td>${p.data}</td><td>Sal: ${p.pSal} / Doce: ${p.pDoce}</td><td>Sal: ${p.sSal} / Doce: ${p.sDoce}</td><td>R$ ${aPagar.toFixed(2)}</td><td><b>${statusBadge}</b></td></tr>`;
+            });
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
+        }
+
+        function calcularDashboard() {
+            let totalReceber = 0;
+            let totalVendido = 0;
+            db.pedidos.forEach(p => {
+                // A retirada salva já gera previsão de recebimento; sobras ajustam o valor depois.
+                if(p.statusRetirada && !p.statusPago) {
+                    const sal = Number(p.pSal) || 0;
+                    const doce = Number(p.pDoce) || 0;
+                    const sSal = p.statusFechado ? (Number(p.sSal) || 0) : 0;
+                    const sDoce = p.statusFechado ? (Number(p.sDoce) || 0) : 0;
+                    const vendidos = Math.max(0, sal - sSal) + Math.max(0, doce - sDoce);
+                    totalVendido += vendidos;
+                    totalReceber += vendidos * PRECO;
+                }
+            });
+            document.getElementById('dash-a-receber').innerText = `R$ ${totalReceber.toFixed(2)}`;
+            document.getElementById('dash-pao-vendido').innerText = totalVendido;
+        }
+
+        function renderizarClientesDono() {
+            let container = document.getElementById('lista-clientes-dono');
+            let clientes = db.usuarios.filter(u => u.tipo === 'cliente');
+            if(clientes.length === 0) {
+                container.innerHTML = `<p style="color:#666;">Nenhum cliente cadastrado.</p>`;
+                return;
+            }
+            container.innerHTML = '';
+            clientes.forEach(c => {
+                let devendo = 0;
+                db.pedidos.filter(p => p.user === c.user && p.statusRetirada && !p.statusPago).forEach(p => {
+                    const sSal = p.statusFechado ? (Number(p.sSal) || 0) : 0;
+                    const sDoce = p.statusFechado ? (Number(p.sDoce) || 0) : 0;
+                    const vendidos = Math.max(0, (Number(p.pSal) || 0) - sSal) + Math.max(0, (Number(p.pDoce) || 0) - sDoce);
+                    devendo += vendidos * PRECO;
+                });
+                let ativo = c.ativo !== false;
+                let btnStatusText = ativo ? "Desativar" : "Ativar";
+                let btnStatusClass = ativo ? "btn-danger" : "btn-success";
+                let statusLabel = ativo ? `<span style="color: var(--success); font-weight: bold;">Ativo</span>` : `<span style="color: var(--danger); font-weight: bold;">Inativo</span>`;
+                let safeUser = encodeURIComponent(c.user);
+                container.innerHTML += `
+                    <div id="cliente-card-${encodeURIComponent(c.user)}" style="border: 1px solid #ccc; padding: 15px; border-radius: 5px; margin-bottom: 10px; background: ${ativo ? '#fff' : '#f2f2f2'}; transition: outline 0.2s;">
+                        <div style="margin-bottom: 10px;"><strong>${escaparHTML(c.nome)}</strong> (${escaparHTML(c.user)}) - ${statusLabel}<br>
+                        Saldo Pendente: <span style="color: var(--danger); font-weight: bold;">R$ ${devendo.toFixed(2)}</span></div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button class="btn btn-success" style="flex: 1; margin: 0; padding: 8px;" onclick="marcarComoPago(decodeURIComponent('${safeUser}'))">✅ Marcar como Pago (Dyko)</button>
+                            <button class="btn ${btnStatusClass}" style="flex: 1; margin: 0; padding: 8px;" onclick="alternarStatusCliente(decodeURIComponent('${safeUser}'))">${btnStatusText}</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function marcarComoPago(user) {
+            let cli = db.usuarios.find(u => u.user === user);
+            let nomeCli = cli ? cli.nome : user;
+            if(!confirm(`Confirmar que o Dyko recebeu e marcar como pago os pedidos pendentes de ${nomeCli}?`)) return;
+            db.pedidos.forEach(p => {
+                if(p.user === user && p.statusRetirada && !p.statusPago) {
+                    p.statusPago = true;
+                    p.dataPagamento = new Date().toISOString();
+                }
+            });
+            salvarDb();
+            mostrarToast("Pagamento registrado pelo Dyko com sucesso!");
+            renderizarClientesDono();
+        }
+
+        function alternarStatusCliente(user) {
+            let c = db.usuarios.find(u => u.user === user);
+            if(!c) return;
+            c.ativo = c.ativo === false ? true : false;
+            salvarDb();
+            mostrarToast(c.ativo ? "Cliente ativado com sucesso!" : "Cliente desativado com sucesso!");
+            renderizarClientesDono();
+        }
+
+        function carregarPedidosDono() {
+            let data = document.getElementById('filtro-data-dono').value;
+            let container = document.getElementById('lista-pedidos-dono');
+            let pedidosDia = db.pedidos.filter(p => p.data === data);
+            if(pedidosDia.length === 0) {
+                container.innerHTML = `<p style="color:#666; margin-top:10px;">Nenhum pedido nesta data.</p>`;
+                return;
+            }
+            container.innerHTML = '';
+            pedidosDia.forEach((p) => {
+                let cli = db.usuarios.find(u => u.user === p.user);
+                let nomeCli = cli ? cli.nome : p.user;
+                const pSal = Number(p.pSal) || 0;
+                const pDoce = Number(p.pDoce) || 0;
+                const sSal = p.statusFechado ? (Number(p.sSal) || 0) : 0;
+                const sDoce = p.statusFechado ? (Number(p.sDoce) || 0) : 0;
+                const vendidos = Math.max(0, pSal - sSal) + Math.max(0, pDoce - sDoce);
+                const valor = p.statusPago ? 0 : vendidos * PRECO;
+                const status = p.statusPago ? '✅ Pago' : (!p.statusRetirada ? '⏳ Pedido aberto' : (p.statusFechado ? '📋 Sobras registradas' : '⏳ Aguardando sobras'));
+                container.innerHTML += `
+                    <div style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-top: 10px; background: #fafafa;">
+                        <strong>Cliente: ${escaparHTML(nomeCli)}</strong>
+                        <div style="margin-top:8px;padding:10px;background:#fff3cd;border-radius:6px;font-weight:bold;">
+                          ${p.statusPago ? 'Valor recebido:' : (p.statusFechado ? 'Valor final a receber:' : 'Previsão a receber:')}
+                          R$ ${valor.toFixed(2)}
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;">
+                          <label><b>Sal (pegou)</b><br><input type="number" min="0" step="1" id="alt-psal-${db.pedidos.indexOf(p)}" value="${pSal}" style="width:100%;box-sizing:border-box;padding:8px;"></label>
+                          <label><b>Doce (pegou)</b><br><input type="number" min="0" step="1" id="alt-pdoce-${db.pedidos.indexOf(p)}" value="${pDoce}" style="width:100%;box-sizing:border-box;padding:8px;"></label>
+                          <label><b>Sal (sobrou)</b><br><input type="number" min="0" step="1" id="alt-ssal-${db.pedidos.indexOf(p)}" value="${sSal}" style="width:100%;box-sizing:border-box;padding:8px;"></label>
+                          <label><b>Doce (sobrou)</b><br><input type="number" min="0" step="1" id="alt-sdoce-${db.pedidos.indexOf(p)}" value="${sDoce}" style="width:100%;box-sizing:border-box;padding:8px;"></label>
+                        </div>
+                        <button class="btn btn-primary" style="width:100%;margin-top:12px;" onclick="confirmarAlteracaoQuantidade(${db.pedidos.indexOf(p)})">Alterar Quantidade</button>
+                        <div style="margin-top:10px;font-weight:bold;">Status: ${status}</div>
+                    </div>`;
+            });
+        }
+
+        function confirmarAlteracaoQuantidade(indice) {
+            const pedido = db.pedidos[indice];
+            if (!pedido) return mostrarToast("Pedido não encontrado.");
+            const pegar = id => {
+                const campo = document.getElementById(id + indice);
+                const valor = Number(campo.value);
+                return Number.isInteger(valor) && valor >= 0 ? valor : null;
+            };
+            const pSal = pegar('alt-psal-');
+            const pDoce = pegar('alt-pdoce-');
+            const sSal = pegar('alt-ssal-');
+            const sDoce = pegar('alt-sdoce-');
+            if ([pSal,pDoce,sSal,sDoce].some(v => v === null)) return mostrarToast("Informe quantidades inteiras iguais ou maiores que zero.");
+            if (sSal > pSal || sDoce > pDoce) return mostrarToast("As sobras não podem ser maiores que a quantidade retirada.");
+            if (!confirm(`Confirmar alteração do pedido de ${pedido.user} em ${pedido.data}?`)) return;
+            pedido.pSal = pSal;
+            pedido.pDoce = pDoce;
+            pedido.sSal = sSal;
+            pedido.sDoce = sDoce;
+            if (pedido.statusRetirada && (sSal > 0 || sDoce > 0 || pedido.statusFechado)) pedido.statusFechado = true;
+            salvarDb();
+            mostrarToast("Quantidade alterada e salva com sucesso.");
+            carregarPedidosDono();
+            if (typeof renderizarPainelDono === 'function') renderizarPainelDono();
+            if (typeof renderizarClientesDono === 'function') renderizarClientesDono();
+        }
+
+        function escaparHTML(valor) {
+            return String(valor ?? '').replace(/[&<>"']/g, caractere => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[caractere]));
+        }
+    </script>
+</body>
+</html>
